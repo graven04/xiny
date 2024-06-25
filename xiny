@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+# Function to display the usage of the script
+usage() {
+    echo "Usage:"
+    echo "  $0 language [--editor EDITOR]"
+    echo "  $0 --list"
+    exit 1
+}
+
+# Check if no arguments are provided
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+# Initialize variables
+LANGUAGE=""
+EDITOR=""
+LIST_FLAG=0
+URL="https://learnxinyminutes.com/docs/"
+mkdir -p /tmp/xiny
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --editor)
+            if [ -z "$2" ]; then
+                echo "Error: --editor requires an argument."
+                usage
+            fi
+            if [ $LIST_FLAG -eq 1 ]; then
+                echo "Error: --list is mutually exclusive with --editor."
+                usage
+            fi
+            EDITOR="$2"
+            shift 2
+            ;;
+        --list)
+            if [ ! -z "$EDITOR" ] || [ ! -z "$LANGUAGE" ]; then
+                echo "Error: --list is mutually exclusive with other arguments."
+                usage
+            fi
+            LIST_FLAG=1
+            shift
+            ;;
+        *)
+            if [ ! -z "$LANGUAGE" ]; then
+                echo "Error: Only one positional argument is allowed."
+                usage
+            fi
+            LANGUAGE="$1"
+            shift
+            ;;
+    esac
+done
+
+# Validate arguments
+if [ -z "$LANGUAGE" ] && [ $LIST_FLAG -eq 0 ]; then
+    echo "Error: language is required unless --list is specified."
+    usage
+fi
+
+# Execute functionality based on the parsed arguments
+if [ $LIST_FLAG -eq 1 ]; then
+    echo "List option selected."
+    # Add your code for --list functionality here
+    if [ -f /tmp/xiny/index.html ]; then
+        grep -A 1 '<td class="name">' /tmp/xiny/index.html | grep -oP '(?<=href="\/docs\/).*(?=/">)' | less
+    else
+	curl -o /tmp/xiny/index.html  https://learnxinyminutes.com/ 
+
+	grep -A 1 '<td class="name">' /tmp/xiny/index.html | grep -oP '(?<=href="\/docs\/).*(?=/">)' | less
+    fi
+    
+else
+    echo "Language: $LANGUAGE"
+    if [ ! -z "$EDITOR" ]; then
+        echo "Editor: $EDITOR"
+        # Add your code for language and --editor functionality here
+
+	
+	FULL_URL="$URL$LANGUAGE/"
+	FILE_URL=$(curl -s $FULL_URL | grep -Po '(?<=href="/docs/)[^"]*')
+	if [[ $FILE_URL ]]
+	then
+	    curl -s $URL$FILE_URL > /tmp/xiny/$LANGUAGE
+	    $EDITOR /tmp/xiny/$LANGUAGE
+	else
+	    echo "No data found for $LANGUAGE"
+	    echo -e "Please run this script with any programming language as a parameter, like so:\n ./xiny python"
+	fi
+
+	
+    else
+        # Add your code for handling language only here
+	FULL_URL="$URL$LANGUAGE/"
+	FILE_URL=$(curl -s $FULL_URL | grep -Po '(?<=href="/docs/)[^"]*')
+
+	if [[ $FILE_URL ]]
+	then
+	    curl -s $URL$FILE_URL | less
+	else
+	    echo "No data found for $LANGUAGE"
+	    echo -e "Please run this script with any programming language as a parameter, like so:\n ./xiny python"
+	fi
+	
+    fi
+fi
